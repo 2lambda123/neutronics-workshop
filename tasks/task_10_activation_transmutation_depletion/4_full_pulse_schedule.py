@@ -60,12 +60,7 @@ flux_in_each_group, micro_xs = openmc.deplete.get_microxs_and_flux(
     energies='CCFE-709',
 )
 
-# Plotting the neutron spectra
-plt.title('neutron flux spectra')
-plt.plot(openmc.mgxs.GROUP_STRUCTURES['CCFE-709'][:-1], flux_in_each_group[0])
-plt.xscale('log')
-plt.yscale('log')
-plt.show()
+
 
 # We define timesteps together with the source rate to make it clearer
 timesteps_and_source_rates = [
@@ -95,26 +90,23 @@ timesteps_and_source_rates = [
 timesteps = [item[0] for item in timesteps_and_source_rates]
 source_rates = [item[1] for item in timesteps_and_source_rates]
 
-# constructing the operator, note we pass in the flux and micro xs
-operator = openmc.deplete.IndependentOperator(
-    materials=materials,
-    fluxes=flux_in_each_group,
-    micros=micro_xs,
-    reduce_chain=True,  # reduced to only the isotopes present in depletable materials and their possible progeny
-    reduce_chain_level=5,
-    normalization_mode="source-rate"
-)
-
-# construct the integrator
-integrator = openmc.deplete.PredictorIntegrator(
-    operator=operator,
+model.deplete(
     timesteps=timesteps,
+    method="predictor",  # predictor is a simple but quick method
+    operator_class='IndependentOperator',
+    operator_kwargs={
+        "normalization_mode": "source-rate",  # needed as this is a fixed source simulation
+        "chain_file": openmc.config['chain_file'],
+        "reduce_chain_level": 5,
+        "reduce_chain": True,
+        "fluxes":flux_in_each_group,
+        "micros":micro_xs,
+        "materials":materials,
+    },
+    # integrator_kwargs
     source_rates=source_rates,
     timestep_units='s'
 )
-
-# this runs the depltion calculations for the timesteps
-integrator.integrate()
 
 # Loads up the results
 results = openmc.deplete.ResultsList.from_hdf5("depletion_results.h5")
@@ -123,6 +115,13 @@ times, number_of_Ag110_atoms = results.get_atoms(my_material, 'Ag110')
 # prints the atoms in a table
 for time, num in zip(times, number_of_Ag110_atoms):
     print(f" Time {time}s. Number of Ag110 atoms {num}")
+
+# Plotting the neutron spectra
+plt.title('neutron flux spectra')
+plt.plot(openmc.mgxs.GROUP_STRUCTURES['CCFE-709'][:-1], flux_in_each_group[0])
+plt.xscale('log')
+plt.yscale('log')
+plt.show()
 
 # plots the number of atoms as a function of time
 plt.cla()
