@@ -118,7 +118,7 @@ plot_1 = plt.imshow(
     ),
 )
 cbar = plt.colorbar(plot_1)
-cbar.set_label(f"Dose [milli Sv per second]")
+cbar.set_label("Dose [milli Sv per second]")
 
 
 # gets unique levels for outlines contour plot and for the color scale
